@@ -23,17 +23,17 @@ import javax.servlet.http.HttpServletResponse;
 @WebServlet("/MyServlet")
 
 public class MyServlet extends HttpServlet {
-	
+
 	private static final long serialVersionUID = 1L;
 	String ip,res,str,base64;
 	int num,num1
-	
-	
+
+
 	;
-	
+
 
     /**
-     * Default constructor. 
+     * Default constructor.
      */
     public MyServlet() {
         // TODO Auto-generated constructor stub
@@ -49,7 +49,7 @@ public class MyServlet extends HttpServlet {
 		out.println("connecting to android");
 		ip=request.getRemoteAddr();//returns the ip address of the client that sent the request
 		System.out.println(ip);
-		
+
 	}
 
 	/**
@@ -57,90 +57,85 @@ public class MyServlet extends HttpServlet {
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		// TODO Auto-generated method stub
-		//PrintWriter out=response.getWriter();
-		
-		
-		
+
+		PrintWriter out=response.getWriter();
+        response.setCharacterEncoding("UTF-8");
 		try
 		{
-		byte buf[]=new byte[40];
-		byte b[]=new byte[40];
-		
-		
-		ServletInputStream sin=request.getInputStream();
-		
-		num=sin.readLine(buf, 0, buf.length);//readline returns the actual number of bytes read
-		String message=new String(buf);
-		System.out.println(message);
-		
-		//sin.close();
-		//response.setStatus(HttpServletResponse.SC_OK);
-		Connection connection=null;
-		try
-		{
-		Class.forName("com.mysql.jdbc.Driver");
-        String url="jdbc:mysql://localhost:3306/new_schema";
-        String user="root";
-        String password="shreya";
-        connection=DriverManager.getConnection(url, user, password);
-        Statement stmt=connection.createStatement();
-        String sql="UPDATE server "
-                + "SET IPaddress = '"+ip+"'WHERE mobileno = '"+message+"'";
-        stmt.execute(sql);
-		}
-		catch(ClassNotFoundException e)
-		{
-			System.out.println("cannot find class"+e);
-		}
-        catch(SQLException e)
-        {
-        	e.printStackTrace();
-        }
-		  finally
-          {
-              if(connection!=null)
-              {
-                  try {
-					connection.close();
-				} catch (SQLException e) {
-					
-					e.printStackTrace();
-				}
-              }
-          }
-		OutputStreamWriter writer=new OutputStreamWriter(response.getOutputStream());
-		res="mobile no. received";
-		str="hello client";
-		System.out.println(res);
-		writer.write(res+"\n");
-		System.out.println(str);//string which is to be base64 encoded
-		writer.write(str+"\n");
-		writer.flush();
-		//writer.close();
-		ServletInputStream sin1=request.getInputStream();
-		num1=sin1.readLine(b,0,b.length);
-		base64=new String(b);
-		System.out.println(base64);
-		sin.close();
-		sin1.close();
-		response.setStatus(HttpServletResponse.SC_OK);
-		
-		
-		
-		
-		
-		
-		writer.close();
-		
-		
-		
-		
+            String cycle = request.getParameter("Cycle");
+
+
+            if("1".equals(cycle)){
+                // if cycle no. is 1  do this
+                response.setStatus(HttpServletResponse.SC_OK);
+
+                // get client ip and mobile number
+                String clientIP = request.getRemoteAddr();
+                String mbNumber = request.getParameter("Data");
+
+                // save it to database
+                Connection dbConn=null;
+                try
+                {
+                    Class.forName("com.mysql.jdbc.Driver");
+                    String url="jdbc:mysql://localhost:3306/new_schema";
+                    String user="root";
+                    String password="shreya";
+                    dbConn=DriverManager.getConnection(url, user, password);
+                    Statement stmt=dbConn.createStatement();
+                    String sql="UPDATE server "+"SET IPaddress = '"+clientIP+"'WHERE mobileno = '"+mbNumber+"'";
+                    stmt.execute(sql);
+                }
+                catch(ClassNotFoundException e)
+                {
+                    System.out.println("cannot find class"+e);
+                }
+                catch(SQLException e)
+                {
+                    e.printStackTrace();
+                }
+                finally
+                {
+                    if(connection!=null)
+                    {
+                        try {
+                            connection.close();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+
+                // create a output stream
+                OutputStreamWriter writer=new OutputStreamWriter(response.getOutputStream());
+
+                // create response to sent
+                String res = "Acknowledgement : Mobile Number Received \n Message : Hello Client";
+
+                // write response to output stream and close stream
+                writer.write(res);
+                writer.flush();
+                writer.close();
+
+            }else if("2".equals(cycle)){
+                // if cycle no. is 2  do this
+                response.setStatus(HttpServletResponse.SC_OK);
+
+                String dataBase64 = request.getParameter("Data");
+
+                // do what you want do with data_bas64
+
+                // set and send the response
+            }
+            else{
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            }
 		}
 		catch(IOException e)
 		{
 			response.getWriter().println(e);
 		}
-		
+
 	}
 
 }
