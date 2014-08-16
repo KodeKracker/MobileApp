@@ -5,7 +5,6 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
@@ -51,8 +50,11 @@ import android.widget.Toast;
 
 public class MainActivity3 extends Activity {
 
-	private String base64,message,number,str;
-	private InetAddress LocalIP;
+	private String message = null;
+	private String message2 = null;
+	private String str = null;
+	private String imei = null;
+
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +73,7 @@ public class MainActivity3 extends Activity {
 			    new ProcessMobileNumber().execute(mb);
 			}
 		});
+
 	}
 
 
@@ -158,7 +161,7 @@ public class MainActivity3 extends Activity {
 			}
 			catch(Exception e)
 			{
-				e.printStackTrace();
+				Toast.makeText(MainActivity3.this, "Incorrect pin", Toast.LENGTH_LONG).show();
 			}
 			return message;
 	}
@@ -171,6 +174,42 @@ public class MainActivity3 extends Activity {
 		et.setText("");
 	}
 
+				URL url = new URL("http://10.210.8.168:8080/New/MyServlet");
+				URLConnection urlconnection = url.openConnection();
+
+				urlconnection.setDoInput(true);
+				urlconnection.setDoOutput(true);
+
+				OutputStreamWriter out = new OutputStreamWriter(
+						urlconnection.getOutputStream());
+				TelephonyManager tm = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+
+				imei = tm.getDeviceId();
+
+				out.write(imei + "\n");// sending IMEI no. to server
+				out.flush();
+				out.close();
+
+				BufferedReader in = new BufferedReader(new InputStreamReader(
+						urlconnection.getInputStream()));
+				message = in.readLine();//Acknowledgment  sent by server
+				str = in.readLine();// reading the string sent by server
+				System.out.println(str);
+				in.close();
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			return message;
+
+		}
+
+		protected void onPostExecute(String result) {
+
+			Toast.makeText(MainActivity3.this, result, Toast.LENGTH_LONG)
+					.show();
+
+		}
 
 	}
 
@@ -179,6 +218,75 @@ public class MainActivity3 extends Activity {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main_activity3, menu);
 		return true;
+	}
+//This will receive a string ,digitally sign it and send it back to Servlet1 on button click
+	private class Sendbase64 extends AsyncTask<Void, Void, String> {
+		protected String doInBackground(Void... params) {
+
+			try {
+				URL url1 = new URL("http://10.210.8.168:8080/Base64/Servlet1");
+				URLConnection urlconnection = url1.openConnection();
+
+				urlconnection.setDoOutput(true);
+				urlconnection.setDoInput(true);
+				KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");// returns
+																			// a
+																			// keypair
+																			// generator
+																			// object
+																			// that
+																			// generates
+																			// public/private
+																			// key
+																			// pair
+																			// for
+																			// the
+																			// specified
+																			// algorithm
+				kpg.initialize(1024);
+				KeyPair kp = kpg.generateKeyPair();
+				PrivateKey priKey = kp.getPrivate();
+				PublicKey pubKey = kp.getPublic();
+				Signature instance = Signature.getInstance("SHA1withRSA");
+				instance.initSign(priKey);// initialize this object for signing
+				instance.update(str.getBytes());// updates the data to be signed
+												// or verified,using the
+												// specified array of bytes
+
+				byte[] signature = instance.sign();
+
+				byte[] publickeybytes = pubKey.getEncoded();
+
+				MyEntity obj = new MyEntity();
+				obj.setStr(str);
+				obj.setPublickeybytes(publickeybytes);
+				obj.setSignature(signature);
+				Gson gson = new Gson();
+				String json = gson.toJson(obj);//converting java object into json representation
+				OutputStreamWriter out1 = new OutputStreamWriter(
+						urlconnection.getOutputStream());
+				out1.write(json);
+
+				System.out.println(str);
+				System.out.println(new String(signature));
+				System.out.println(new String(publickeybytes));
+				out1.flush();
+				out1.close();
+				BufferedReader in = new BufferedReader(new InputStreamReader(
+						urlconnection.getInputStream()));
+				message2 = in.readLine();//Acknowledgment sent by server on verifying the signature
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			return message2;
+		}
+
+		protected void onPostExecute(String result) {
+			Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT)
+					.show();
+		}
+
 	}
 
 }
